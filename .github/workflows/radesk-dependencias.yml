@@ -1,0 +1,31 @@
+# RADESK: actualiza librerias con avisos de seguridad (cargo audit) y guarda Cargo.lock.
+name: RADESK - Actualizar dependencias
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  actualizar:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Actualizar librerias vulnerables
+        run: |
+          for p in crossbeam-channel openssl rustls quinn-proto quinn-udp zstd-safe zstd-sys libz-sys \
+                   quick-xml@0.30.0 quick-xml@0.31.0 quick-xml@0.37.5 time@0.3.36; do
+            cargo update -p "$p" || echo "No se pudo actualizar $p"
+          done
+      - name: Informe cargo audit
+        run: |
+          cargo install cargo-audit --locked
+          cargo audit || true
+      - name: Guardar Cargo.lock
+        run: |
+          git config user.name "RADESK"
+          git config user.email "radesk@localhost"
+          git add Cargo.lock
+          git commit -m "RADESK: actualizar dependencias con avisos de seguridad" || echo "Sin cambios"
+          git push
